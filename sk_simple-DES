@@ -1,0 +1,118 @@
+import random
+def sdes_keyschedule(key,R_idx):
+    if R_idx == 1:
+        R_key = key[0:8]
+    elif R_idx == 2:
+        R_key = key[1:9]
+    elif R_idx == 3:
+        R_key = key[2:9] + [key[0]]
+    return R_key
+
+def sdes_sbox(s, index): 
+    sdes_o =  []
+    s_box1 = [[1,0,1,0,1,0,0,0,1,1,1,0,0,1,1,1,0,0,1,1,1,0,0,0], [0,0,1,1,0,0,1,1,0,0,1,0,0,0,0,1,1,1,1,0,1,0,1,1]]
+    s_box2 = [[1,0,0,0,0,0,1,1,0,1,0,1,1,1,1,0,0,1,0,1,1,0,1,0], [1,0,1,0,1,1,0,0,0,1,1,1,1,1,0,0,1,0,0,0,1,1,0,0]]
+    idx1 = s[0]
+    idx2 = s[1]*4 + s[2]*2 + s[3]*1
+    if index == 1:
+        sdes_o+=s_box1[idx1][idx2*3:idx2*3+3]
+    elif index == 2:
+        sdes_o+=s_box2[idx1][idx2*3:idx2*3+3]
+    return sdes_o 
+        
+def sdes8(rblock, roundkey): 
+    n = 0
+    s_input = []
+    rblock8=[]
+    rblock8.append(rblock[0])
+    rblock8.append(rblock[1])
+    rblock8.append(rblock[3])
+    rblock8.append(rblock[2])
+    rblock8.append(rblock[3])
+    rblock8.append(rblock[2])
+    rblock8.append(rblock[4])
+    rblock8.append(rblock[5])
+    while n < 8:
+        s_input.append(rblock8[n] ^ roundkey[n])
+        n+=1
+    return sdes_sbox(s_input[0:4], 1) + sdes_sbox(s_input[4:8], 2)
+
+def sdes_genkey():  
+    i = 0
+    key = []
+    while i < 9:
+        key.append(random.randint(0,1))
+        i+=1
+    return key
+
+def sdes_encrypt(key, pblock):  
+    L_0 = pblock[0:6]
+    R_0 = pblock[6:12]
+
+    n = 0               
+    L_1 = R_0
+    F_1 = sdes8(R_0, sdes_keyschedule(key,1))
+    R_1 = []
+    while n < 6:
+        R_1.append(L_0[n] ^ F_1[n])
+        n+=1
+
+    n = 0
+    L_2 = R_1
+    F_2 = sdes8(R_1, sdes_keyschedule(key,2))
+    R_2 = []
+    while n < 6:
+        R_2.append(L_1[n] ^ F_2[n])
+        n+=1
+
+    n = 0
+    L_3 = R_2
+    F_3 = sdes8(R_2, sdes_keyschedule(key,3))
+    R_3 = []
+    while n < 6:
+        R_3.append(L_2[n] ^ F_3[n])
+        n+=1
+        
+    cblock = L_3 + R_3
+    return cblock 
+
+
+def sdes_decrypt(key, cblock):
+    L_3 = cblock[0:6]
+    R_3 = cblock[6:12]
+
+    n = 0
+    R_2 = L_3
+    F_3 = sdes8(R_2, sdes_keyschedule(key,3))
+    L_2 = []
+    while n < 6:
+        L_2.append(R_3[n] ^ F_3[n])
+        n+=1            
+
+    n = 0
+    R_1 = L_2
+    F_2 = sdes8(R_1, sdes_keyschedule(key,2))
+    L_1 = []
+    while n < 6:
+        L_1.append(R_2[n] ^ F_2[n])
+        n+=1
+
+    n = 0
+    R_0 = L_1
+    F_1 = sdes8(R_0, sdes_keyschedule(key,1))
+    L_0 = []
+    while n < 6:
+        L_0.append(R_1[n] ^ F_1[n])
+        n+=1
+    
+    pblock = L_0 + R_0
+    return pblock 
+
+key=sdes_genkey()
+msg=list(map(int, input().split()))
+print("key:",key,"\nmsg:",msg)
+ctx=sdes_encrypt(key, msg)
+print("ctx:",ctx)
+dtx=sdes_decrypt(key,ctx)
+print("dtx:",dtx)
+input()
